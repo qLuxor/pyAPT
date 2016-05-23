@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import pylibftdi
 
-from pyAPT import message, controller, mts50, prm1
+from . import message, controller, mts50, prm1
 
 __version__ = "0.01"
 __author__ = "Shuning Bian"
