@@ -248,7 +248,7 @@ class Controller(object):
 
     offset = min(offset, self.linear_range[1])
     offset = max(offset, 0)
-    offset_apt = offset * self.position_scale
+    offset_apt = int(offset * self.position_scale)
 
     """
     <: little endian
