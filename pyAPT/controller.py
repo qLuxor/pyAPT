@@ -160,12 +160,36 @@ class Controller(object):
 
     return True
 
+  def _positionToEnc(self,position):
+    """
+    Convert the position (in mm or degrees) into encoder units.
+    """
+    return round(position*self.position_scale)
+  
+  def _encToPosition(self,enc):
+    """
+    Convert encoder units into position (in mm or degrees).
+    """
+    return enc/self.position_scale
+  
+  def _velocityToEnc(self,velocity):
+    """
+    Convert the velocity (in mm/s or degrees/s) into encoder units.
+    """
+    return round(velocity*self.velocity_scale)
+
+  def _accelerationToEnc(self,acceleration):
+    """
+    Convert the acceleration (in mm/s^2 or degrees/s^2) into encoder units.
+    """
+    return round(acceleration*self.acceleration_scale)
+
   def status(self, channel=1):
     """
     Returns the status of the controller, which is its position, velocity, and
     statusbits
 
-    Position and velocity will be in mm and mm/s respectively.
+    Position and velocity will be in mm and mm/s (deg and deg/s) respectively.
     """
     reqmsg = Message(message.MGMSG_MOT_REQ_DCSTATUSUPDATE, param1=channel)
     self._send_message(reqmsg)
@@ -214,6 +238,15 @@ class Controller(object):
   def resume_end_of_move_messages(self):
       resumemsg = Message(message.MGMSG_MOT_RESUME_ENDOFMOVEMSGS)
       self._send_message(resumemsg)
+
+  def setChanEnableState(self,channel=0x01,enable=True):
+    if enable:
+      enflag = 0x01
+    else:
+      enflag = 0x02
+
+    chanenablemsg = Message(message.MGMSG_MOD_SET_CHANENABLESTATE,param1=channel,param2=enflag)
+    self._send_message(channelenablemsg)
 
   def home(self, wait=True, velocity=None, offset=0):
     """
@@ -408,6 +441,15 @@ class Controller(object):
     acc_apt = acceleration * self.acceleration_scale
     max_vel_apt = max_velocity * self.velocity_scale
 
+    self.setVelParams(max_vel_apt,acc_apt,channel)
+
+    
+  def setVelParams(self,max_vel_apt,acc_apt,channel=1):
+    """
+    Set the velocity parameters for the specified motor channel.
+    For DC servo controllers, the velocity is set in encoder counts/sec and acceleration in encoder counts/sec/sec.
+    """
+
     """
     <: small endian
     H: 2 bytes for channel
@@ -418,6 +460,28 @@ class Controller(object):
     params = st.pack('<Hiii',channel,0,acc_apt, max_vel_apt)
     setmsg = Message(message.MGMSG_MOT_SET_VELPARAMS, data=params)
     self._send_message(setmsg)
+
+  def setJogParams(self,jog_mode,jog_step_size,jog_acc,jog_max_vel,jog_stop,channel=1)
+    """
+    Set the velocity jog parameters.
+    For DC servo controllers, values set in encoder counts.
+    """
+
+    """
+    <: small endian
+    H: 2 bytes for channel
+    H: 2 bytes for jog mode
+    i: 4 bytes for jog step size
+    i: 4 bytes for jog min velocity
+    i: 4 bytes for jog acceleration
+    i: 4 bytes for jog max velocity
+    H: 2 bytes for jog stop mode
+    """
+    params = st.pack('<HHiiiiH',channel,jog_mode,jog_step_size,0,jog_acc,jog_max_vel,jog_stop)
+    setmsg = Message(message.MGMSG_MOT_SET_JOGPARAMS,data=params)
+    self._send_message(setmsg)
+
+  def setLimSwitchParams(self,CWhard,CCWhard,CWsoft,CCWsoft,mode):
 
   def velocity_parameters(self, channel=1, raw=False):
     """
